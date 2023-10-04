@@ -1,0 +1,148 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{F9CB1361-E19C-47D0-913D-0FD819220D3D}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>ZapClient</RootNamespace>
+    <AssemblyName>ZapClient</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <HintPath>..\packages\NLog.5.1.3\lib\net46\NLog.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Transactions" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="zsClient, Version=1.8.19.1565, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>.\zsClient.dll</HintPath>
+    </Reference>
+    <Reference Include="zsUtilities, Version=1.8.19.1565, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>.\zsUtilities.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Data\Beam.cs" />
+    <Compile Include="Data\BeamData.cs" />
+    <Compile Include="Data\BeamDataTableEntry.cs" />
+    <Compile Include="Data\Collimator.cs" />
+    <Compile Include="Data\CollimatorSet.cs" />
+    <Compile Include="Data\CollisionConfig.cs" />
+    <Compile Include="Data\Commissioning.cs" />
+    <Compile Include="Data\CommissioningDataMapEntry.cs" />
+    <Compile Include="Data\CommissioningTables.cs" />
+    <Compile Include="Config.cs" />
+    <Compile Include="Data\Constrain.cs" />
+    <Compile Include="Data\Dataset.cs" />
+    <Compile Include="Data\DatasetSetting.cs" />
+    <Compile Include="Data\DeliveryData.cs" />
+    <Compile Include="Data\DeliveryInstruction.cs" />
+    <Compile Include="Data\DeliveryPath.cs" />
+    <Compile Include="Data\DensityModel.cs" />
+    <Compile Include="Data\DensityModelData.cs" />
+    <Compile Include="Data\DoseSet.cs" />
+    <Compile Include="Data\DoseVolumeData.cs" />
+    <Compile Include="Data\DoseVolumeGrid.cs" />
+    <Compile Include="Data\Filter.cs" />
+    <Compile Include="Data\Fraction.cs" />
+    <Compile Include="Data\KVImage.cs" />
+    <Compile Include="Data\Treatment.cs" />
+    <Compile Include="Data\VOIContourType.cs" />
+    <Compile Include="Extensions\PatientExtension.cs" />
+    <Compile Include="Extensions\PlanStatusExtensions.cs" />
+    <Compile Include="Helpers\Network.cs" />
+    <Compile Include="Data\Isocenter.cs" />
+    <Compile Include="Data\IsocenterBeamSet.cs" />
+    <Compile Include="Data\IsocenterSet.cs" />
+    <Compile Include="Data\IsodoseLevel.cs" />
+    <Compile Include="Data\MVDetectorBeamData.cs" />
+    <Compile Include="Data\OCRTable.cs" />
+    <Compile Include="Data\Path.cs" />
+    <Compile Include="Data\PathNode.cs" />
+    <Compile Include="Data\PathNodesInfo.cs" />
+    <Compile Include="Data\PathSet.cs" />
+    <Compile Include="Data\PlanData.cs" />
+    <Compile Include="Data\PlanInfo.cs" />
+    <Compile Include="Data\PlanSummary.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Data\StructureData.cs" />
+    <Compile Include="Data\SystemData.cs" />
+    <Compile Include="Data\TableConfigurations.cs" />
+    <Compile Include="Data\TableDimensions.cs" />
+    <Compile Include="Data\TablePositions.cs" />
+    <Compile Include="Data\TPRTable.cs" />
+    <Compile Include="Data\TreatmentPaths.cs" />
+    <Compile Include="Data\VOIContour.cs" />
+    <Compile Include="Data\VOIContourPoints.cs" />
+    <Compile Include="Data\VOIData.cs" />
+    <Compile Include="Data\VOISet.cs" />
+    <Compile Include="ZapClient.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="zsClient.dll" />
+    <Content Include="zsUtilities.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+    <None Include="README.md" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
