@@ -72,7 +72,7 @@ namespace ZapClient
         {
             _logger?.Info("Open connection");
 
-            var data = _client.Login(_username ?? string.Empty, _password ?? string.Empty);
+            var data = _client.Login(_username, _password);
 
             while (!_client.IsLoggedIn)
             {
