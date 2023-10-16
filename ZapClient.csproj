@@ -55,7 +55,7 @@
       <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog, Version=5.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
-      <HintPath>..\packages\NLog.5.1.3\lib\net46\NLog.dll</HintPath>
+      <HintPath>..\ZapReport\packages\NLog.5.1.3\lib\net46\NLog.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
@@ -135,10 +135,6 @@
     <Compile Include="Data\VOIData.cs" />
     <Compile Include="Data\VOISet.cs" />
     <Compile Include="ZapClient.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="zsClient.dll" />
-    <Content Include="zsUtilities.dll" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
