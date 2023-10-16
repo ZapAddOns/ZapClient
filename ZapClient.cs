@@ -17,8 +17,8 @@ namespace ZapClient
         readonly Config _config;
         readonly ZClient _client;
         readonly Logger _logger;
-        string _username;
-        string _password;
+        string _username = string.Empty;
+        string _password = string.Empty;
         Func<string, string, (string, string)> _getUsernameAndPassword;
         GlobalNodeSet _globalNodeSet;
 
@@ -58,6 +58,11 @@ namespace ZapClient
             get => _password;
         }
 
+        public Config Config 
+        { 
+            get => new Config(_config); 
+        }
+
         public bool IsConnected
         {
             get => _client.IsLoggedIn;
@@ -67,7 +72,7 @@ namespace ZapClient
         {
             _logger?.Info("Open connection");
 
-            var data = _client.Login(_username, _password);
+            var data = _client.Login(_username ?? string.Empty, _password ?? string.Empty);
 
             while (!_client.IsLoggedIn)
             {
@@ -1071,14 +1076,16 @@ namespace ZapClient
                     var config = new Config
                     {
                         Server = "10.0.0.105",
-                        Port = 8088
+                        Port = 8088,
+                        Username = string.Empty,
+                        Password = string.Empty
                     };
 
                     // Didn't find one, so create a default one
                     using (StreamWriter file = File.CreateText(filename))
                     {
                         JsonSerializer serializer = new JsonSerializer();
-                        serializer.Serialize(file, typeof(Config));
+                        serializer.Serialize(file, config, typeof(Config));
                     }
                 }
             }
