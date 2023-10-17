@@ -381,6 +381,12 @@ namespace ZapClient
                 var startNode = 0;
                 var distance = 0.0;
 
+                if (isocenter.DeliveryInstructions == null || isocenter.DeliveryInstructions.Length == 0)
+                {
+                    // Could happen, if you don't look into the Plan Summary
+                    continue;
+                }
+                
                 if (isocenter != firstIsocenter)
                 {
                     // Get TA distance
@@ -388,12 +394,6 @@ namespace ZapClient
 
                     travelTADistanceInDegrees += distance;
                     numOfTANodes += numOfTANodes;
-                }
-
-                if (isocenter.DeliveryInstructions.Length == 0)
-                {
-                    // Could happen, if you don't look into the Plan Summary
-                    continue;
                 }
 
                 numOfNodes += isocenter.DeliveryInstructions.Length - startNode - 1; // One less, because the first is take into account for TA
