@@ -8,18 +8,18 @@
         public CollisionConfig CollisionConfig;
         public DeliveryInstruction[] DeliveryInstructions;
         public int ID;
-        public int IsocenterDeliveryIndex;
         public double TargetDose;
-        // Depracted?
+        // From Broker planning isocenter set
+        public int IsocenterDeliveryIndex;
+        public int IsocenterID;
         public double IsocenterScaleFactor;
+        public bool IsocenterVisible;
+        public string PathUuid;
+        public int Region;
         public DeliveryPath DeliveryPath;
         public IsocenterBeamSet IsocenterBeamSet;
         public Collimator Collimator;
         public double[] AlignmentRotation;
-        public int IsocenterID;
-        public string PathUuid;
-        public int Region;
-        public bool IsocenterVisible;
         public double[] AlignmentCenter;
     }
 }

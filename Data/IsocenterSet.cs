@@ -6,7 +6,7 @@
         public int ActiveID;
         public Isocenter[] Isocenters;
         public int TotalIsocenters;
-        // Depracted?
+        // From Broker planning isocenter set
         public double[] MaxInWorld;
         public double[] CenterDV;
     }
