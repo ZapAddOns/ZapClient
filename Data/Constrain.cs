@@ -2,6 +2,7 @@
 {
     public class Constrain
     {
+        // From Broker
         public double Density;
         public double Dilation;
         public int NumConstraintPointsToUse;

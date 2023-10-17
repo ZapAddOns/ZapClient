@@ -2,6 +2,7 @@
 {
     public class Isocenter
     {
+        // From Broker plan definition
         public double[] CTTarget;
         public string CollID;
         public CollisionConfig CollisionConfig;
@@ -9,6 +10,7 @@
         public int ID;
         public int IsocenterDeliveryIndex;
         public double TargetDose;
+        // Depracted?
         public double IsocenterScaleFactor;
         public DeliveryPath DeliveryPath;
         public IsocenterBeamSet IsocenterBeamSet;
