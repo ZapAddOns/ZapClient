@@ -38,6 +38,8 @@ namespace ZapClient.Data
             get => Treatments.Select(t => t.EndTime).Max();
         }
 
+        public List<string> AAImages { get; set; } = new List<string>();
+
         public Fraction(ZapSurgical.Data.Fraction fraction)
         {
             fraction.Update();
