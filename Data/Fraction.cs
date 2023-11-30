@@ -40,6 +40,8 @@ namespace ZapClient.Data
 
         public List<string> AAImages { get; set; } = new List<string>();
 
+        public object LogData { get; set; }
+
         public Fraction(ZapSurgical.Data.Fraction fraction)
         {
             fraction.Update();
