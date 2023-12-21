@@ -374,6 +374,7 @@ namespace ZapClient
             var travelTADistanceInDegrees = 0.0;
             var numOfNodes = 0;
             var numOfTANodes = 0;
+            var numOfExtraAA = 0;
 
             foreach (var isocenter in beamData.IsocenterSet.Isocenters)
             {
@@ -392,8 +393,16 @@ namespace ZapClient
                     // Get TA distance
                     (distance, nodes, startNode) = CalcDistanceForTA(isocenter);
 
-                    travelTADistanceInDegrees += distance;
-                    numOfTANodes += numOfTANodes;
+                    if (distance == 0 && nodes == 0)
+                    {
+                        // There are not enough beams to make a TA, so add an extra AA
+                        numOfExtraAA++;
+                    }
+                    else
+                    {
+                        travelTADistanceInDegrees += distance;
+                        numOfTANodes += numOfTANodes;
+                    }
                 }
 
                 numOfNodes += isocenter.DeliveryInstructions.Length - startNode - 1; // One less, because the first is take into account for TA
@@ -432,7 +441,7 @@ namespace ZapClient
             var imagingTrackingTime = Math.Max(1, (doseDeliveryTime + gantryMotionTime) / 45.0) * 2.0;
             var pressHVTime = result.TotalIsocenters * 2.0;
             var transitionalAlignmentTime = travelTADistanceInDegrees * 1.0 / 6.0 + 2.0 * numOfTANodes + (2.0 + 10.0 + 2.0) * (result.TotalIsocenters - 1); // Travel time + 2 s for each node + 2 s for pressing the flash + 10 s for TA image check + 2 s for pressing the flash
-            var autoAlignmentTime = 600.0;
+            var autoAlignmentTime = 600.0 + numOfExtraAA * 180.0;
 
             result.TotalTreatmentTime = doseDeliveryTime + gantryMotionTime + imagingTrackingTime + pressHVTime + transitionalAlignmentTime + autoAlignmentTime;
 
@@ -465,6 +474,15 @@ namespace ZapClient
             {
                 i++;
                 numOfTANodes++;
+
+                // Are there any nodes left
+                if (isocenter.DeliveryInstructions.Count() <= i)
+                {
+                    // No more nodes left, so it isn't possible to make a TA
+                    // Could happen, when there are to less beams for an isocenter
+
+                    return (0, 0, startNode);
+                }
 
                 var node = isocenter.DeliveryInstructions[i];
 
