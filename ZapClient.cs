@@ -101,6 +101,8 @@ namespace ZapClient
         public void CloseConnection()
         {
             _client.Logout();
+
+            _logger?.Info("Closed connection");
         }
 
         #endregion
