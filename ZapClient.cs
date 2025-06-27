@@ -100,7 +100,10 @@ namespace ZapClient
 
         public void CloseConnection()
         {
-            _client.Logout();
+            if (_client.IsLoggedIn)
+            {
+                _client.Logout();
+            }
 
             _logger?.Info("Closed connection");
         }
