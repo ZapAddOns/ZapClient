@@ -805,7 +805,7 @@ namespace ZapClient
                 // Save the used GlobalNodeSystem for this ZSystem for later use
                 if (_globalNodeSet == null)
                 {
-                    _globalNodeSet = GetSystemGlobalNodeList(((ZList<TreatmentReportData>)data)?.Value[0].System);
+                    _globalNodeSet = GetSystemGlobalNodeList(treatmentReportList?.Value[0].System);
                 }
 
                 var treatment = new Treatment(treatmentReportData, fraction);
@@ -870,6 +870,11 @@ namespace ZapClient
             // Get kV images for this fraction
             foreach (var path in fraction.PathSet)
             {
+                if (path is null)
+                {
+                    continue;
+                }
+
                 var kvImagesOnNode = GetQueryKVImageOnNode(path);
 
                 FillNodesWithAngles(kvImagesOnNode.KVImagesOnNodes, _globalNodeSet);
@@ -938,21 +943,11 @@ namespace ZapClient
 
         private KVImageOnPathData GetQueryKVImageOnNode(ZapSurgical.Data.Path planPath)
         {
-            if (planPath == null)
-            {
-                throw new ArgumentNullException(nameof(planPath));
-            }
-
             return SafeExchange<KVImageOnPathData>(new QueryKVImageOnNodeRequest { PlanPath = planPath }, $"Get kV image on node list for plan path '{planPath}'");
         }
 
         private KVImageOnPathOffNodeData GetQueryKVImageOffNode(ZapSurgical.Data.Path planPath)
         {
-            if (planPath == null)
-            {
-                throw new ArgumentNullException(nameof(planPath));
-            }
-
             return SafeExchange<KVImageOnPathOffNodeData>(new QueryKVImageOffNodeRequest { PlanPath = planPath }, $"Get kV image off node list for plan path {planPath}");
         }
 
