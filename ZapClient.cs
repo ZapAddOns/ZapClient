@@ -11,6 +11,10 @@ using ZapSurgical.Data;
 
 namespace ZapClient
 {
+    /// <summary>
+    /// ZapClient provides methods to connect to the Zap Surgical system, retrieve and manage patient, plan, and treatment data,
+    /// and perform calculations related to dose and treatment times. It handles authentication, data exchange, and file downloads.
+    /// </summary>
     public class ZapClient
     {
         DateTime _lastConnection;
@@ -52,6 +56,11 @@ namespace ZapClient
 
         public bool IsConnected => _client.IsLoggedIn;
 
+        /// <summary>
+        /// Opens a connection to the Zap Surgical system using the configured username and password.
+        /// If login fails, prompts for new credentials until successful or cancelled. Cancel by 
+        /// returning empty strings.
+        /// </summary>
         public bool OpenConnection()
         {
             _logger?.Info("Open connection");
@@ -82,6 +91,10 @@ namespace ZapClient
             return true;
         }
 
+        /// <summary>
+        /// Closes the connection to the Zap Surgical system if currently logged in.
+        /// Logs the action using the configured logger.
+        /// </summary>
         public void CloseConnection()
         {
             if (_client.IsLoggedIn)
@@ -269,6 +282,11 @@ namespace ZapClient
             return SafeDownload<PlanData>(plan.PlanName, plan.PlanBOUuid);
         }
 
+        /// <summary>
+        /// Calculates and returns a summary of the plan, including total MUs, treatment time, and other metrics.
+        /// </summary>
+        /// <param name="plan">The plan for which to retrieve the summary.</param>
+        /// <returns>A PlanSummary object containing calculated metrics for the plan.</returns>
         public PlanSummary GetPlanSummaryForPlan(Plan plan)
         {
             if (plan == null)
@@ -467,6 +485,11 @@ namespace ZapClient
             return Math.Round(Math.Abs(Math.Max(axialDistance, obliqueDistance) / Math.PI * 180) % 360);
         }
 
+        /// <summary>
+        /// Retrieves VOI (Volume of Interest) data for the specified plan.
+        /// </summary>
+        /// <param name="plan">The plan for which to retrieve VOI data.</param>
+        /// <returns>VOIData object containing VOI information for the plan.</returns>
         public VOIData GetVOIsForPlan(Plan plan)
         {
             if (plan == null)
@@ -477,6 +500,12 @@ namespace ZapClient
             return SafeDownload<VOIData>(plan.PlanName, plan.VOIBOUuid);
         }
 
+        /// <summary>
+        /// Retrieves the Dose Volume Data for the specified plan.
+        /// </summary>
+        /// <param name="plan">The plan for which to retrieve Dose Volume Data.</param>
+        /// <returns>DoseVolumeData object containing dose volume information for the plan.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when the plan is null.</exception>
         public DoseVolumeData GetDVDataForPlan(Plan plan)
         {
             if (plan == null)
@@ -487,6 +516,12 @@ namespace ZapClient
             return SafeDownload<DoseVolumeData>(plan.PlanName, plan.DVDataBOUuid);
         }
 
+        /// <summary>
+        /// Retrieves the BeamData for the specified plan.
+        /// </summary>
+        /// <param name="plan">The plan for which to retrieve beam data.</param>
+        /// <returns>BeamData object containing beam information for the plan.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when the plan is null.</exception>
         public BeamData GetBeamsForPlan(Plan plan)
         {
             if (plan == null)
@@ -497,6 +532,12 @@ namespace ZapClient
             return SafeDownload<BeamData>(plan.PlanName, plan.BeamSetBOUuid);
         }
 
+        /// <summary>
+        /// Retrieves the SystemData for the specified plan.
+        /// </summary>
+        /// <param name="plan">The plan for which to retrieve system configuration data.</param>
+        /// <returns>SystemData object containing system configuration information for the plan.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when the plan is null.</exception>
         public SystemData GetSystemDataForPlan(Plan plan)
         {
             if (plan == null)
@@ -507,6 +548,11 @@ namespace ZapClient
             return SafeDownload<SystemData>(plan.PlanName, plan.SystemConfigBOUuid);
         }
 
+        /// <summary>
+        /// Retrieves the DoseVolumeGrid for the specified plan.
+        /// Downloads the grid data using the plan's DoseVolumeBOUuid and parses it.
+        /// Returns null if the grid cannot be found or an error occurs during download or parsing.
+        /// </summary>
         public DoseVolumeGrid GetDoseVolumeGridForPlan(Plan plan)
         {
             if (plan == null)
@@ -540,7 +586,7 @@ namespace ZapClient
                 {
                     return DoseVolumeGrid.ParseDoseVolumeGrid(stream);
                 }
-                catch (Exception ex) 
+                catch (Exception ex)
                 {
                     _logger?.Error(ex, $"Reading dose volume grid from file '{boList.BOs.First().Uuid}'");
                     throw new Exception($"Reading dose volume grid from file '{boList.BOs.First().Uuid}'", ex);
@@ -548,6 +594,10 @@ namespace ZapClient
             }
         }
 
+        /// <summary>
+        /// Retrieves delivery data for the specified plan.
+        /// If shortVersion is false, populates each fraction with its treatments and kV images.
+        /// </summary>
         public DeliveryData GetDeliveryDataForPlan(Plan plan, bool shortVersion = false)
         {
             if (plan == null)
@@ -573,6 +623,11 @@ namespace ZapClient
             return deliveryData;
         }
 
+        /// <summary>
+        /// Calculates the total dose for a list of kV images on nodes by summing the dose for each image using its KV, MA, and MS values.
+        /// </summary>
+        /// <param name="nodeData">The node data to use.</param>
+        /// <returns>Total dose</returns>
         public double CalcDoseForkVImages(List<KVImageOnNodeData> nodeData)
         {
             double totalDose = 0.0;
@@ -588,6 +643,11 @@ namespace ZapClient
             return totalDose;
         }
 
+        /// <summary>
+        /// Calculates the total dose for a list of kV images off nodes by summing the dose for each image using its KV, MA, and MS values.
+        /// </summary>
+        /// <param name="nodeData">The node data to use.</param>
+        /// <returns>Total dose</returns>
         public double CalcDoseForkVImages(List<KVImageOffNodeData> nodeData)
         {
             double totalDose = 0.0;
@@ -673,6 +733,12 @@ namespace ZapClient
             }
         }
 
+        /// <summary>
+        /// Calculates the dose for each isocenter in the provided BeamData using the system's commissioning data.
+        /// For each isocenter, finds the matching commissioning data for the collimator size, then calculates the dose
+        /// for each beam using the output factor (OF), tissue phantom ratio (TPR), and monitor units (MU).
+        /// The calculated dose is assigned to the isocenter's TargetDose property.
+        /// </summary>
         public void CalcDoseForIsocenters(BeamData beamData, SystemData systemData)
         {
             double ocr = 1; // Only use the center point
@@ -681,7 +747,9 @@ namespace ZapClient
             {
                 double dose = 0;
 
-                var commisioningDataForCollimator = systemData.Commissioning.CommissioningDataMap.Where(cdm => cdm.CollimatorSize == isocenter.Collimator.Size).FirstOrDefault();
+                var commisioningDataForCollimator = systemData.Commissioning.CommissioningDataMap
+                    .Where(cdm => cdm.CollimatorSize == isocenter.Collimator.Size)
+                    .FirstOrDefault();
 
                 if (commisioningDataForCollimator == null)
                 {
@@ -698,9 +766,6 @@ namespace ZapClient
                     {
                         continue;
                     }
-
-                    //var distanceSourceTarget = Math.Sqrt(Math.Pow(beam.CTSource[0] - beam.CTTarget[0], 2) + Math.Pow(beam.CTSource[1] - beam.CTTarget[1], 2) + Math.Pow(beam.CTSource[2] - beam.CTTarget[2], 2));
-                    //var distanceDeviceTarget = Math.Sqrt(Math.Pow(beam.DeviceSource[0] - beam.CTTarget[0], 2) + Math.Pow(beam.DeviceSource[1] - beam.CTTarget[1], 2) + Math.Pow(beam.DeviceSource[2] - beam.CTTarget[2], 2));
 
                     var tpr = GetTPRValue(depths, tprs, beam.MaxEffDepth);
 
