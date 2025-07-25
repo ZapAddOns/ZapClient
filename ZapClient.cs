@@ -158,9 +158,10 @@ namespace ZapClient
 
         private void AddPatientsToList(ref List<Patient> result, List<Patient> list)
         {
+            var existingIds = new HashSet<string>(result.Select(p => p.MedicalId));
             foreach (var patient in list)
             {
-                if (!result.Select((p) => p.MedicalId).ToList().Contains(patient.MedicalId))
+                if (existingIds.Add(patient.MedicalId))
                     result.Add(patient);
             }
         }
