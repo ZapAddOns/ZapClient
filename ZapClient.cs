@@ -44,29 +44,13 @@ namespace ZapClient
             }
         }
 
-        #endregion
+        public string Username => _username;
 
-        #region Connecting
+        public string Password => _password;
 
-        public string Username 
-        { 
-            get => _username;
-        }
+        public Config Config => new Config(_config);
 
-        public string Password 
-        { 
-            get => _password;
-        }
-
-        public Config Config 
-        { 
-            get => new Config(_config); 
-        }
-
-        public bool IsConnected
-        {
-            get => _client.IsLoggedIn;
-        }
+        public bool IsConnected => _client.IsLoggedIn;
 
         public bool OpenConnection()
         {
