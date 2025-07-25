@@ -171,7 +171,7 @@ namespace ZapClient
         {
             if (patient == null)
             {
-                throw new ArgumentNullException("patient");
+                throw new ArgumentNullException(nameof(patient));
             }
 
             var boList = SafeExchange<BOList>(new PatientBOQueryRequest { Patient = patient, PatientFileType = PatientFileType.PatientPhoto }, $"Get picture for patient '{patient.MedicalId.Trim()}'");
@@ -898,11 +898,21 @@ namespace ZapClient
 
         private KVImageOnPathData GetQueryKVImageOnNode(ZapSurgical.Data.Path planPath)
         {
+            if (planPath == null)
+            {
+                throw new ArgumentNullException(nameof(planPath));
+            }
+
             return SafeExchange<KVImageOnPathData>(new QueryKVImageOnNodeRequest { PlanPath = planPath }, $"Get kV image on node list for plan path '{planPath}'");
         }
 
         private KVImageOnPathOffNodeData GetQueryKVImageOffNode(ZapSurgical.Data.Path planPath)
         {
+            if (planPath == null)
+            {
+                throw new ArgumentNullException(nameof(planPath));
+            }
+
             return SafeExchange<KVImageOnPathOffNodeData>(new QueryKVImageOffNodeRequest { PlanPath = planPath }, $"Get kV image off node list for plan path {planPath}");
         }
 
