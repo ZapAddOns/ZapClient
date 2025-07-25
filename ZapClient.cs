@@ -800,14 +800,14 @@ namespace ZapClient
                 return result;
             }
 
+            // Save the used GlobalNodeSystem for this ZSystem for later use
+            if (_globalNodeSet == null)
+            {
+                _globalNodeSet = GetSystemGlobalNodeList(treatmentReportList?.Value[0].System);
+            }
+
             foreach (var treatmentReportData in treatmentReportList?.Value)
             {
-                // Save the used GlobalNodeSystem for this ZSystem for later use
-                if (_globalNodeSet == null)
-                {
-                    _globalNodeSet = GetSystemGlobalNodeList(treatmentReportList?.Value[0].System);
-                }
-
                 var treatment = new Treatment(treatmentReportData, fraction);
 
                 // Get beams, that belong to this treatment
