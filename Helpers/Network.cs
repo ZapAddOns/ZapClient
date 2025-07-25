@@ -10,7 +10,7 @@ namespace ZapClient.Helpers
             return Dns.GetHostName();
         }
 
-        public static string GetIPAdress()
+        public static string GetIPAddress()
         {
             // Retrive the Name of HOST
             var hostName = Dns.GetHostName();

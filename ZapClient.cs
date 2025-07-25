@@ -1017,7 +1017,7 @@ namespace ZapClient
 
                 if (!File.Exists(filename))
                 {
-                    filename = "ZapClient." + Network.GetIPAdress() + ".cfg";
+                    filename = "ZapClient." + Network.GetIPAddress() + ".cfg";
                 }
 
                 if (!File.Exists(filename))
