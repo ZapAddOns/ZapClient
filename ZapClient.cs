@@ -115,14 +115,10 @@ namespace ZapClient
         /// <summary>
         /// Get a list of all TPS users
         /// </summary>
-        /// <returns>List with all TPS users</returns>
         public List<User> GetTPSUsers()
         {
-            _logger?.Info("Get TPS users");
-
-            var data = Exchange(new UserQueryRequest());
-
-            return data.IsError() ? null : (data as UserList).Users;
+            var userList = SafeExchange<UserList>(new UserQueryRequest(), "Get TPS users");
+            return userList?.Users ?? new List<User>();
         }
 
         /// <summary>
@@ -177,11 +173,8 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(patient));
             }
 
-            _logger?.Info($"Get plans for patient '{patient.MedicalId.Trim()}'");
-
-            var data = Exchange(new PlanQueryRequest { Patient = patient });
-
-            return data.IsError() ? null : (data as PlanList)?.Plans;
+            var planList = SafeExchange<PlanList>(new PlanQueryRequest { Patient = patient }, $"Get plans for patient '{patient.MedicalId.Trim()}'");
+            return planList?.Plans ?? new List<Plan>();
         }
 
         /// <summary>
@@ -197,16 +190,7 @@ namespace ZapClient
                 throw new ArgumentNullException("patient");
             }
 
-            _logger?.Info($"Get picture for patient '{patient.MedicalId.Trim()}'");
-
-            var data = Exchange(new PatientBOQueryRequest { Patient = patient, PatientFileType = PatientFileType.PatientPhoto });
-
-            if (data.IsError())
-            {
-                return null;
-            }
-
-            var boList = (BOList)data;
+            var boList = SafeExchange<BOList>(new PatientBOQueryRequest { Patient = patient, PatientFileType = PatientFileType.PatientPhoto }, $"Get picture for patient '{patient.MedicalId.Trim()}'");
 
             if (boList is null || boList.BOs.Count == 0)
             {
@@ -217,7 +201,7 @@ namespace ZapClient
 
             using (var stream = new MemoryStream())
             {
-                data = _client.Download(boList.BOs.Last(), stream);
+                var data = _client.Download(boList.BOs.Last(), stream);
 
                 if (data.IsError())
                 {
@@ -250,16 +234,7 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(patient));
             }
 
-            _logger?.Info($"Get information for DICOM series '{uuid}'");
-
-            var data = Exchange(new DcmSeriesQueryRequest { Patient = patient });
-
-            if (data.IsError())
-            {
-                return null;
-            }
-
-            var dcmSeriesList = (DicomSeriesList)data;
+            var dcmSeriesList = SafeExchange<DicomSeriesList>(new DcmSeriesQueryRequest { Patient = patient }, $"Get information for DICOM series '{uuid}'");
 
             if (dcmSeriesList is null || dcmSeriesList.List.Count == 0)
             {
@@ -275,22 +250,13 @@ namespace ZapClient
                     orthancId = dcmSeries.OrthancID;
             }
 
-            _logger?.Info($"Orthanc Id '{orthancId}' to search");
-
             if (orthancId == string.Empty)
             {
                 _logger?.Info($"DICOM series '{uuid}' not found");
                 return null;
             }
 
-            data = Exchange(new DicomSeriesListRequest { Patient = patient });
-
-            if (data.IsError())
-            {
-                return null;
-            }
-
-            var dicomSeriesList = (DicomSeriesList)data;
+            var dicomSeriesList = SafeExchange<DicomSeriesList>(new DicomSeriesListRequest { Patient = patient }, $"Orthanc Id '{orthancId}' to search");
 
             foreach (var dicomSeries in dicomSeriesList.List)
             {
@@ -319,18 +285,9 @@ namespace ZapClient
 
             var planBOUuid = plan.PlanBOUuid;
 
-            _logger?.Info($"Load PlanData with Uuid '{planBOUuid}' for plan '{plan.PlanName}'");
+            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = planBOUuid }, $"Load PlanData with Uuid '{planBOUuid}' for plan '{plan.PlanName}'");
 
-            var data = Exchange(new PlanBOQueryRequest { BoUuid = planBOUuid });
-
-            if (data.IsError())
-            {
-                return null;
-            }
-
-            var result = Download<PlanData>(planBOUuid, data);
-
-            return result;
+            return Download<PlanData>(planBOUuid, data);
         }
 
         public PlanSummary GetPlanSummaryForPlan(Plan plan)
@@ -342,14 +299,7 @@ namespace ZapClient
 
             var planSummaryBOUuid = plan.StatusDetailBoUuid;
 
-            _logger?.Info($"Get PlanSummary with Uuid '{planSummaryBOUuid}' for plan '{plan.PlanName}'");
-
-            var data = Exchange(new PlanBOQueryRequest { BoUuid = planSummaryBOUuid });
-
-            if (data.IsError())
-            {
-                return null;
-            }
+            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = planSummaryBOUuid }, $"Get PlanSummary with Uuid '{planSummaryBOUuid}' for plan '{plan.PlanName}'");
 
             var result = Download<PlanSummary>(planSummaryBOUuid, data);
 
@@ -551,14 +501,7 @@ namespace ZapClient
 
             var voiDataBOUuid = plan.VOIBOUuid;
 
-            _logger?.Info($"Get VOIs with Uuid '{voiDataBOUuid}' for plan '{plan.PlanName}'");
-
-            var data = Exchange(new PlanBOQueryRequest { BoUuid = voiDataBOUuid });
-
-            if (data.IsError())
-            {
-                return null;
-            }
+            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = voiDataBOUuid }, $"Get VOIs with Uuid '{voiDataBOUuid}' for plan '{plan.PlanName}'");
 
             return Download<VOIData>(voiDataBOUuid, data);
         }
@@ -572,14 +515,7 @@ namespace ZapClient
 
             var planDVDataBOUuid = plan.DVDataBOUuid;
 
-            _logger?.Info($"Get DVData with Uuid '{planDVDataBOUuid}' for plan '{plan.PlanName}'");
-
-            var data = Exchange(new PlanBOQueryRequest { BoUuid = planDVDataBOUuid });
-
-            if (data.IsError())
-            {
-                return null;
-            }
+            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = planDVDataBOUuid }, $"Get DVData with Uuid '{planDVDataBOUuid}' for plan '{plan.PlanName}'");
 
             return Download<DoseVolumeData>(planDVDataBOUuid, data);
         }
@@ -593,14 +529,7 @@ namespace ZapClient
 
             var beamDataBOUuid = plan.BeamSetBOUuid;
 
-            _logger?.Info($"Get BeamSet with Uuid '{beamDataBOUuid}' for plan '{plan.PlanName}'");
-
-            var data = Exchange(new PlanBOQueryRequest { BoUuid = beamDataBOUuid });
-
-            if (data.IsError())
-            {
-                return null;
-            }
+            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = beamDataBOUuid }, $"Get BeamSet with Uuid '{beamDataBOUuid}' for plan '{plan.PlanName}'");
 
             return Download<BeamData>(beamDataBOUuid, data);
         }
@@ -614,14 +543,7 @@ namespace ZapClient
 
             var systemDataBOUuid = plan.SystemConfigBOUuid;
 
-            _logger?.Info($"Get SystemData with Uuid '{systemDataBOUuid}' for plan '{plan.PlanName}'");
-
-            var data = Exchange(new PlanBOQueryRequest { BoUuid = systemDataBOUuid });
-
-            if (data.IsError())
-            {
-                return null;
-            }
+            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = systemDataBOUuid }, $"Get SystemData with Uuid '{systemDataBOUuid}' for plan '{plan.PlanName}'");
 
             return Download<SystemData>(systemDataBOUuid, data);
         }
@@ -635,16 +557,7 @@ namespace ZapClient
 
             var doseVolumeBOUuid = plan.DoseVolumeBOUuid;
 
-            _logger?.Info($"Get DoseVolumeGrid with Uuid '{doseVolumeBOUuid}' for plan '{plan.PlanName}'");
-
-            var data = Exchange(new PlanBOQueryRequest { BoUuid = doseVolumeBOUuid });
-
-            if (data.IsError())
-            {
-                return null;
-            }
-
-            var boList = (BOList)data;
+            var boList = SafeExchange<BOList>(new PlanBOQueryRequest { BoUuid = doseVolumeBOUuid }, $"Get DoseVolumeGrid with Uuid '{doseVolumeBOUuid}' for plan '{plan.PlanName}'");
 
             if (boList is null || boList.BOs.Count == 0)
             {
@@ -654,7 +567,7 @@ namespace ZapClient
 
             using (var stream = new MemoryStream())
             {
-                data = _client.Download(boList.BOs.First(), stream);
+                var data = _client.Download(boList.BOs.First(), stream);
 
                 if (data.IsError())
                 {
@@ -683,20 +596,12 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(plan));
             }
 
-            _logger?.Info($"Get delivery data for plan '{plan.PlanName}'");
-
-            var data = Exchange(new DeliveredBeamSetQueryRequest { Plan = plan });
-
-            if (data.IsError())
-            {
-                return null;
-            }
-
-            var result = new DeliveryData((DeliveryBeamSet)data);
+            var deliveryBeamSet = SafeExchange<DeliveryBeamSet>(new DeliveredBeamSetQueryRequest { Plan = plan }, $"Get delivery data for plan '{plan.PlanName}'");
+            var deliveryData = new DeliveryData(deliveryBeamSet);
 
             if (!shortVersion)
             {
-                foreach (var fraction in result.Fractions)
+                foreach (var fraction in deliveryData.Fractions)
                 {
                     // Populate treatments
                     fraction.Treatments.AddRange(GetTreatmentsForFraction(fraction).OrderBy(f => f.StartTime));
@@ -706,7 +611,7 @@ namespace ZapClient
                 }
             }
 
-            return result;
+            return deliveryData;
         }
 
         public double CalcDoseForkVImages(List<KVImageOnNodeData> nodeData)
@@ -862,23 +767,16 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(fraction));
             }
 
-            _logger?.Info($"Get treatment data for fraction '{fraction.ID}'");
-
-            var data = Exchange(new ReportQueryRequest { Fraction = fraction.ZapObject });
-
-            if (data.IsError())
-            {
-                return null;
-            }
+            var treatmentReportList = SafeExchange<ZList<TreatmentReportData>>(new ReportQueryRequest { Fraction = fraction.ZapObject }, $"Get treatment data for fraction '{fraction.ID}'");
 
             var result = new List<Treatment>();
 
-            if (((ZList<TreatmentReportData>)data)?.Value == null || ((ZList<TreatmentReportData>)data)?.Value.Count == 0)
+            if (treatmentReportList?.Value == null || treatmentReportList?.Value.Count == 0)
             {
                 return result;
             }
 
-            foreach (var treatmentReportData in ((ZList<TreatmentReportData>)data)?.Value)
+            foreach (var treatmentReportData in treatmentReportList?.Value)
             {
                 // Save the used GlobalNodeSystem for this ZSystem for later use
                 if (_globalNodeSet == null)
@@ -1011,29 +909,17 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(system));
             }
 
-            _logger?.Info($"Get system global node list");
-
-            var data = Exchange(new SystemGlobalNodesQueryRequest { System = system });
-
-            return data.IsError() ? null : (GlobalNodeSet)data;
+            return SafeExchange<GlobalNodeSet>(new SystemGlobalNodesQueryRequest { System = system }, $"Get system global node list");
         }
 
         private KVImageOnPathData GetQueryKVImageOnNode(ZapSurgical.Data.Path planPath)
         {
-            _logger?.Info($"Get kV image on node list for plan path '{planPath}'");
-
-            var data = Exchange(new QueryKVImageOnNodeRequest { PlanPath = planPath });
-
-            return data.IsError() ? null : (KVImageOnPathData)data;
+            return SafeExchange<KVImageOnPathData>(new QueryKVImageOnNodeRequest { PlanPath = planPath }, $"Get kV image on node list for plan path '{planPath}'");
         }
 
         private KVImageOnPathOffNodeData GetQueryKVImageOffNode(ZapSurgical.Data.Path planPath)
         {
-            _logger?.Info($"Get kV image off node list for plan path {planPath}");
-
-            var data = Exchange(new QueryKVImageOffNodeRequest { PlanPath = planPath });
-
-            return data.IsError() ? null : (KVImageOnPathOffNodeData)data;
+            return SafeExchange<KVImageOnPathOffNodeData>(new QueryKVImageOffNodeRequest { PlanPath = planPath }, $"Get kV image off node list for plan path {planPath}");
         }
 
         private void FillNodesWithAngles(List<KVImageOnNodeData> nodeData, GlobalNodeSet globalNodeSet)
@@ -1122,6 +1008,15 @@ namespace ZapClient
                 JsonSerializer serializer = new JsonSerializer();
                 return (Config)serializer.Deserialize(file, typeof(Config));
             }
+        }
+
+        private T SafeExchange<T>(ZRequest request, string logMessage) where T : class
+        {
+            _logger?.Info(logMessage);
+
+            var data = Exchange(request);
+
+            return data.IsError() ? null : data as T;
         }
 
         #endregion
