@@ -100,9 +100,9 @@ namespace ZapClient
             if (_client.IsLoggedIn)
             {
                 _client.Logout();
-            }
 
-            _logger?.Info("Closed connection");
+                _logger?.Info("Closed connection");
+            }
         }
 
         #endregion
@@ -776,6 +776,23 @@ namespace ZapClient
             }
         }
 
+        private T SafeExchange<T>(ZRequest request, string logMessage) where T : class
+        {
+            _logger?.Info(logMessage);
+
+            var data = Exchange(request);
+
+            return data.IsError() ? null : data as T;
+        }
+
+        private T SafeDownload<T>(string name, string boUuid) where T : class
+        {
+
+            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = boUuid }, $"Load {typeof(T)} with Uuid '{boUuid}' for plan '{name}'");
+
+            return Download<T>(boUuid, data);
+        }
+
         /// <summary>
         /// Each fraction could have zero, one or more treatments
         /// This treatments contain start and end time for this treatment 
@@ -1037,23 +1054,6 @@ namespace ZapClient
                 JsonSerializer serializer = new JsonSerializer();
                 return (Config)serializer.Deserialize(file, typeof(Config));
             }
-        }
-
-        private T SafeExchange<T>(ZRequest request, string logMessage) where T : class
-        {
-            _logger?.Info(logMessage);
-
-            var data = Exchange(request);
-
-            return data.IsError() ? null : data as T;
-        }
-
-        private T SafeDownload<T>(string name, string boUuid) where T : class
-        {
-
-            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = boUuid }, $"Load {nameof(T)} with Uuid '{boUuid}' for plan '{name}'");
-
-            return Download<T>(boUuid, data);
         }
 
         #endregion
