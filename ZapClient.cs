@@ -133,10 +133,8 @@ namespace ZapClient
         public List<Patient> GetPatientsWithStatus(PatientStatus patientStatus = PatientStatus.Planning)
         {
             _logger?.Info($"Get patients with status '{patientStatus}'");
-
             var data = Exchange(new PatientQueryRequest { PatientToStatus = patientStatus });
-
-            return data.IsError() ? null : (data as PatientList)?.Patients;
+            return data.IsError() ? new List<Patient>() : (data as PatientList)?.Patients ?? new List<Patient>();
         }
 
         /// <summary>
