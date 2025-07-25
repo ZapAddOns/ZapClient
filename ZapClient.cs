@@ -112,9 +112,8 @@ namespace ZapClient
         /// <returns>List of patients with patient status</returns>
         public List<Patient> GetPatientsWithStatus(PatientStatus patientStatus = PatientStatus.Planning)
         {
-            _logger?.Info($"Get patients with status '{patientStatus}'");
-            var data = Exchange(new PatientQueryRequest { PatientToStatus = patientStatus });
-            return data.IsError() ? new List<Patient>() : (data as PatientList)?.Patients ?? new List<Patient>();
+            var patientList = SafeExchange<PatientList>(new PatientQueryRequest { PatientToStatus = patientStatus }, $"Get patients with status '{patientStatus}'");
+            return patientList?.Patients ?? new List<Patient>();
         }
 
         /// <summary>
@@ -267,11 +266,7 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(plan));
             }
 
-            var planBOUuid = plan.PlanBOUuid;
-
-            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = planBOUuid }, $"Load PlanData with Uuid '{planBOUuid}' for plan '{plan.PlanName}'");
-
-            return Download<PlanData>(planBOUuid, data);
+            return SafeDownload<PlanData>(plan.PlanName, plan.PlanBOUuid);
         }
 
         public PlanSummary GetPlanSummaryForPlan(Plan plan)
@@ -281,11 +276,7 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(plan));
             }
 
-            var planSummaryBOUuid = plan.StatusDetailBoUuid;
-
-            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = planSummaryBOUuid }, $"Get PlanSummary with Uuid '{planSummaryBOUuid}' for plan '{plan.PlanName}'");
-
-            var result = Download<PlanSummary>(planSummaryBOUuid, data);
+            var result = SafeDownload<PlanSummary>(plan.PlanName, plan.StatusDetailBoUuid);
 
             // This information isn't always provided, so the TotalMUs could be 0.
             var beamData = GetBeamsForPlan(plan);
@@ -483,11 +474,7 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(plan));
             }
 
-            var voiDataBOUuid = plan.VOIBOUuid;
-
-            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = voiDataBOUuid }, $"Get VOIs with Uuid '{voiDataBOUuid}' for plan '{plan.PlanName}'");
-
-            return Download<VOIData>(voiDataBOUuid, data);
+            return SafeDownload<VOIData>(plan.PlanName, plan.VOIBOUuid);
         }
 
         public DoseVolumeData GetDVDataForPlan(Plan plan)
@@ -497,11 +484,7 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(plan));
             }
 
-            var planDVDataBOUuid = plan.DVDataBOUuid;
-
-            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = planDVDataBOUuid }, $"Get DVData with Uuid '{planDVDataBOUuid}' for plan '{plan.PlanName}'");
-
-            return Download<DoseVolumeData>(planDVDataBOUuid, data);
+            return SafeDownload<DoseVolumeData>(plan.PlanName, plan.DVDataBOUuid);
         }
 
         public BeamData GetBeamsForPlan(Plan plan)
@@ -511,11 +494,7 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(plan));
             }
 
-            var beamDataBOUuid = plan.BeamSetBOUuid;
-
-            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = beamDataBOUuid }, $"Get BeamSet with Uuid '{beamDataBOUuid}' for plan '{plan.PlanName}'");
-
-            return Download<BeamData>(beamDataBOUuid, data);
+            return SafeDownload<BeamData>(plan.PlanName, plan.BeamSetBOUuid);
         }
 
         public SystemData GetSystemDataForPlan(Plan plan)
@@ -525,11 +504,7 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(plan));
             }
 
-            var systemDataBOUuid = plan.SystemConfigBOUuid;
-
-            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = systemDataBOUuid }, $"Get SystemData with Uuid '{systemDataBOUuid}' for plan '{plan.PlanName}'");
-
-            return Download<SystemData>(systemDataBOUuid, data);
+            return SafeDownload<SystemData>(plan.PlanName, plan.SystemConfigBOUuid);
         }
 
         public DoseVolumeGrid GetDoseVolumeGridForPlan(Plan plan)
@@ -1011,6 +986,14 @@ namespace ZapClient
             var data = Exchange(request);
 
             return data.IsError() ? null : data as T;
+        }
+
+        private T SafeDownload<T>(string name, string boUuid) where T : class
+        {
+
+            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = boUuid }, $"Load {nameof(T)} with Uuid '{boUuid}' for plan '{name}'");
+
+            return Download<T>(boUuid, data);
         }
 
         #endregion
