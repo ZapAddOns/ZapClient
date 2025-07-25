@@ -788,7 +788,7 @@ namespace ZapClient
         private T SafeDownload<T>(string name, string boUuid) where T : class
         {
 
-            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = boUuid }, $"Load {typeof(T)} with Uuid '{boUuid}' for plan '{name}'");
+            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = boUuid }, $"Load {typeof(T).Name} with Uuid '{boUuid}' for plan '{name}'");
 
             return Download<T>(boUuid, data);
         }
