@@ -663,6 +663,49 @@ namespace ZapClient
             return totalDose;
         }
 
+        /// <summary>
+        /// Calculates the dose for each isocenter in the provided BeamData using the system's commissioning data.
+        /// For each isocenter, finds the matching commissioning data for the collimator size, then calculates the dose
+        /// for each beam using the output factor (OF), tissue phantom ratio (TPR), and monitor units (MU).
+        /// The calculated dose is assigned to the isocenter's TargetDose property.
+        /// </summary>
+        public void CalcDoseForIsocenters(BeamData beamData, SystemData systemData)
+        {
+            double ocr = 1; // Only use the center point
+
+            foreach (var isocenter in beamData.IsocenterSet.Isocenters)
+            {
+                double dose = 0;
+
+                var commisioningDataForCollimator = systemData.Commissioning.CommissioningDataMap
+                    .Where(cdm => cdm.CollimatorSize == isocenter.Collimator.Size)
+                    .FirstOrDefault();
+
+                if (commisioningDataForCollimator == null)
+                {
+                    continue;
+                }
+
+                var of = commisioningDataForCollimator.CommissioningTables.OFValue;
+                var depths = commisioningDataForCollimator.CommissioningTables.TPRTable.DepthArray;
+                var tprs = commisioningDataForCollimator.CommissioningTables.TPRTable.TPRValueArray;
+
+                foreach (var beam in isocenter.IsocenterBeamSet.Beams)
+                {
+                    if (beam.MU == 0)
+                    {
+                        continue;
+                    }
+
+                    var tpr = GetTPRValue(depths, tprs, beam.MaxEffDepth);
+
+                    dose += beam.MU * of * ocr * tpr;
+                }
+
+                isocenter.TargetDose = dose;
+            }
+        }
+
         #endregion
 
         #region Helper functions
@@ -730,49 +773,6 @@ namespace ZapClient
 
                 // We have a file of type T, so read it
                 return Parse<T>(stream);
-            }
-        }
-
-        /// <summary>
-        /// Calculates the dose for each isocenter in the provided BeamData using the system's commissioning data.
-        /// For each isocenter, finds the matching commissioning data for the collimator size, then calculates the dose
-        /// for each beam using the output factor (OF), tissue phantom ratio (TPR), and monitor units (MU).
-        /// The calculated dose is assigned to the isocenter's TargetDose property.
-        /// </summary>
-        public void CalcDoseForIsocenters(BeamData beamData, SystemData systemData)
-        {
-            double ocr = 1; // Only use the center point
-
-            foreach (var isocenter in beamData.IsocenterSet.Isocenters)
-            {
-                double dose = 0;
-
-                var commisioningDataForCollimator = systemData.Commissioning.CommissioningDataMap
-                    .Where(cdm => cdm.CollimatorSize == isocenter.Collimator.Size)
-                    .FirstOrDefault();
-
-                if (commisioningDataForCollimator == null)
-                {
-                    continue;
-                }
-
-                var of = commisioningDataForCollimator.CommissioningTables.OFValue;
-                var depths = commisioningDataForCollimator.CommissioningTables.TPRTable.DepthArray;
-                var tprs = commisioningDataForCollimator.CommissioningTables.TPRTable.TPRValueArray;
-
-                foreach (var beam in isocenter.IsocenterBeamSet.Beams)
-                {
-                    if (beam.MU == 0)
-                    {
-                        continue;
-                    }
-
-                    var tpr = GetTPRValue(depths, tprs, beam.MaxEffDepth);
-
-                    dose += beam.MU * of * ocr * tpr;
-                }
-
-                isocenter.TargetDose = dose;
             }
         }
 
