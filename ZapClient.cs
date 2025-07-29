@@ -11,6 +11,10 @@ using ZapSurgical.Data;
 
 namespace ZapClient
 {
+    /// <summary>
+    /// ZapClient provides methods to connect to the Zap Surgical system, retrieve and manage patient, plan, and treatment data,
+    /// and perform calculations related to dose and treatment times. It handles authentication, data exchange, and file downloads.
+    /// </summary>
     public class ZapClient
     {
         DateTime _lastConnection;
@@ -44,30 +48,19 @@ namespace ZapClient
             }
         }
 
-        #endregion
+        public string Username => _username;
 
-        #region Connecting
+        public string Password => _password;
 
-        public string Username 
-        { 
-            get => _username;
-        }
+        public Config Config => new Config(_config);
 
-        public string Password 
-        { 
-            get => _password;
-        }
+        public bool IsConnected => _client.IsLoggedIn;
 
-        public Config Config 
-        { 
-            get => new Config(_config); 
-        }
-
-        public bool IsConnected
-        {
-            get => _client.IsLoggedIn;
-        }
-
+        /// <summary>
+        /// Opens a connection to the Zap Surgical system using the configured username and password.
+        /// If login fails, prompts for new credentials until successful or cancelled. Cancel by 
+        /// returning empty strings.
+        /// </summary>
         public bool OpenConnection()
         {
             _logger?.Info("Open connection");
@@ -98,9 +91,18 @@ namespace ZapClient
             return true;
         }
 
+        /// <summary>
+        /// Closes the connection to the Zap Surgical system if currently logged in.
+        /// Logs the action using the configured logger.
+        /// </summary>
         public void CloseConnection()
         {
-            _client.Logout();
+            if (_client.IsLoggedIn)
+            {
+                _client.Logout();
+
+                _logger?.Info("Closed connection");
+            }
         }
 
         #endregion
@@ -110,14 +112,10 @@ namespace ZapClient
         /// <summary>
         /// Get a list of all TPS users
         /// </summary>
-        /// <returns>List with all TPS users</returns>
         public List<User> GetTPSUsers()
         {
-            _logger?.Info("Get TPS users");
-
-            var data = Exchange(new UserQueryRequest());
-
-            return data.IsError() ? null : (data as UserList).Users;
+            var userList = SafeExchange<UserList>(new UserQueryRequest(), "Get TPS users");
+            return userList?.Users ?? new List<User>();
         }
 
         /// <summary>
@@ -127,11 +125,8 @@ namespace ZapClient
         /// <returns>List of patients with patient status</returns>
         public List<Patient> GetPatientsWithStatus(PatientStatus patientStatus = PatientStatus.Planning)
         {
-            _logger?.Info($"Get patients with status '{patientStatus}'");
-
-            var data = Exchange(new PatientQueryRequest { PatientToStatus = patientStatus });
-
-            return data.IsError() ? null : (data as PatientList)?.Patients;
+            var patientList = SafeExchange<PatientList>(new PatientQueryRequest { PatientToStatus = patientStatus }, $"Get patients with status '{patientStatus}'");
+            return patientList?.Patients ?? new List<Patient>();
         }
 
         /// <summary>
@@ -153,9 +148,10 @@ namespace ZapClient
 
         private void AddPatientsToList(ref List<Patient> result, List<Patient> list)
         {
+            var existingIds = new HashSet<string>(result.Select(p => p.MedicalId));
             foreach (var patient in list)
             {
-                if (!result.Select((p) => p.MedicalId).ToList().Contains(patient.MedicalId))
+                if (existingIds.Add(patient.MedicalId))
                     result.Add(patient);
             }
         }
@@ -173,11 +169,8 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(patient));
             }
 
-            _logger?.Info($"Get plans for patient '{patient.MedicalId.Trim()}'");
-
-            var data = Exchange(new PlanQueryRequest { Patient = patient });
-
-            return data.IsError() ? null : (data as PlanList)?.Plans;
+            var planList = SafeExchange<PlanList>(new PlanQueryRequest { Patient = patient }, $"Get plans for patient '{patient.MedicalId.Trim()}'");
+            return planList?.Plans ?? new List<Plan>();
         }
 
         /// <summary>
@@ -190,19 +183,10 @@ namespace ZapClient
         {
             if (patient == null)
             {
-                throw new ArgumentNullException("patient");
+                throw new ArgumentNullException(nameof(patient));
             }
 
-            _logger?.Info($"Get picture for patient '{patient.MedicalId.Trim()}'");
-
-            var data = Exchange(new PatientBOQueryRequest { Patient = patient, PatientFileType = PatientFileType.PatientPhoto });
-
-            if (data.IsError())
-            {
-                return null;
-            }
-
-            var boList = (BOList)data;
+            var boList = SafeExchange<BOList>(new PatientBOQueryRequest { Patient = patient, PatientFileType = PatientFileType.PatientPhoto }, $"Get picture for patient '{patient.MedicalId.Trim()}'");
 
             if (boList is null || boList.BOs.Count == 0)
             {
@@ -213,7 +197,7 @@ namespace ZapClient
 
             using (var stream = new MemoryStream())
             {
-                data = _client.Download(boList.BOs.Last(), stream);
+                var data = _client.Download(boList.BOs.Last(), stream);
 
                 if (data.IsError())
                 {
@@ -246,16 +230,7 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(patient));
             }
 
-            _logger?.Info($"Get information for DICOM series '{uuid}'");
-
-            var data = Exchange(new DcmSeriesQueryRequest { Patient = patient });
-
-            if (data.IsError())
-            {
-                return null;
-            }
-
-            var dcmSeriesList = (DicomSeriesList)data;
+            var dcmSeriesList = SafeExchange<DicomSeriesList>(new DcmSeriesQueryRequest { Patient = patient }, $"Get information for DICOM series '{uuid}'");
 
             if (dcmSeriesList is null || dcmSeriesList.List.Count == 0)
             {
@@ -271,22 +246,13 @@ namespace ZapClient
                     orthancId = dcmSeries.OrthancID;
             }
 
-            _logger?.Info($"Orthanc Id '{orthancId}' to search");
-
             if (orthancId == string.Empty)
             {
                 _logger?.Info($"DICOM series '{uuid}' not found");
                 return null;
             }
 
-            data = Exchange(new DicomSeriesListRequest { Patient = patient });
-
-            if (data.IsError())
-            {
-                return null;
-            }
-
-            var dicomSeriesList = (DicomSeriesList)data;
+            var dicomSeriesList = SafeExchange<DicomSeriesList>(new DicomSeriesListRequest { Patient = patient }, $"Orthanc Id '{orthancId}' to search");
 
             foreach (var dicomSeries in dicomSeriesList.List)
             {
@@ -313,22 +279,14 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(plan));
             }
 
-            var planBOUuid = plan.PlanBOUuid;
-
-            _logger?.Info($"Load PlanData with Uuid '{planBOUuid}' for plan '{plan.PlanName}'");
-
-            var data = Exchange(new PlanBOQueryRequest { BoUuid = planBOUuid });
-
-            if (data.IsError())
-            {
-                return null;
-            }
-
-            var result = Download<PlanData>(planBOUuid, data);
-
-            return result;
+            return SafeDownload<PlanData>(plan.PlanName, plan.PlanBOUuid);
         }
 
+        /// <summary>
+        /// Calculates and returns a summary of the plan, including total MUs, treatment time, and other metrics.
+        /// </summary>
+        /// <param name="plan">The plan for which to retrieve the summary.</param>
+        /// <returns>A PlanSummary object containing calculated metrics for the plan.</returns>
         public PlanSummary GetPlanSummaryForPlan(Plan plan)
         {
             if (plan == null)
@@ -336,18 +294,7 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(plan));
             }
 
-            var planSummaryBOUuid = plan.StatusDetailBoUuid;
-
-            _logger?.Info($"Get PlanSummary with Uuid '{planSummaryBOUuid}' for plan '{plan.PlanName}'");
-
-            var data = Exchange(new PlanBOQueryRequest { BoUuid = planSummaryBOUuid });
-
-            if (data.IsError())
-            {
-                return null;
-            }
-
-            var result = Download<PlanSummary>(planSummaryBOUuid, data);
+            var result = SafeDownload<PlanSummary>(plan.PlanName, plan.StatusDetailBoUuid);
 
             // This information isn't always provided, so the TotalMUs could be 0.
             var beamData = GetBeamsForPlan(plan);
@@ -538,6 +485,11 @@ namespace ZapClient
             return Math.Round(Math.Abs(Math.Max(axialDistance, obliqueDistance) / Math.PI * 180) % 360);
         }
 
+        /// <summary>
+        /// Retrieves VOI (Volume of Interest) data for the specified plan.
+        /// </summary>
+        /// <param name="plan">The plan for which to retrieve VOI data.</param>
+        /// <returns>VOIData object containing VOI information for the plan.</returns>
         public VOIData GetVOIsForPlan(Plan plan)
         {
             if (plan == null)
@@ -545,20 +497,15 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(plan));
             }
 
-            var voiDataBOUuid = plan.VOIBOUuid;
-
-            _logger?.Info($"Get VOIs with Uuid '{voiDataBOUuid}' for plan '{plan.PlanName}'");
-
-            var data = Exchange(new PlanBOQueryRequest { BoUuid = voiDataBOUuid });
-
-            if (data.IsError())
-            {
-                return null;
-            }
-
-            return Download<VOIData>(voiDataBOUuid, data);
+            return SafeDownload<VOIData>(plan.PlanName, plan.VOIBOUuid);
         }
 
+        /// <summary>
+        /// Retrieves the Dose Volume Data for the specified plan.
+        /// </summary>
+        /// <param name="plan">The plan for which to retrieve Dose Volume Data.</param>
+        /// <returns>DoseVolumeData object containing dose volume information for the plan.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when the plan is null.</exception>
         public DoseVolumeData GetDVDataForPlan(Plan plan)
         {
             if (plan == null)
@@ -566,20 +513,15 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(plan));
             }
 
-            var planDVDataBOUuid = plan.DVDataBOUuid;
-
-            _logger?.Info($"Get DVData with Uuid '{planDVDataBOUuid}' for plan '{plan.PlanName}'");
-
-            var data = Exchange(new PlanBOQueryRequest { BoUuid = planDVDataBOUuid });
-
-            if (data.IsError())
-            {
-                return null;
-            }
-
-            return Download<DoseVolumeData>(planDVDataBOUuid, data);
+            return SafeDownload<DoseVolumeData>(plan.PlanName, plan.DVDataBOUuid);
         }
 
+        /// <summary>
+        /// Retrieves the BeamData for the specified plan.
+        /// </summary>
+        /// <param name="plan">The plan for which to retrieve beam data.</param>
+        /// <returns>BeamData object containing beam information for the plan.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when the plan is null.</exception>
         public BeamData GetBeamsForPlan(Plan plan)
         {
             if (plan == null)
@@ -587,20 +529,15 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(plan));
             }
 
-            var beamDataBOUuid = plan.BeamSetBOUuid;
-
-            _logger?.Info($"Get BeamSet with Uuid '{beamDataBOUuid}' for plan '{plan.PlanName}'");
-
-            var data = Exchange(new PlanBOQueryRequest { BoUuid = beamDataBOUuid });
-
-            if (data.IsError())
-            {
-                return null;
-            }
-
-            return Download<BeamData>(beamDataBOUuid, data);
+            return SafeDownload<BeamData>(plan.PlanName, plan.BeamSetBOUuid);
         }
 
+        /// <summary>
+        /// Retrieves the SystemData for the specified plan.
+        /// </summary>
+        /// <param name="plan">The plan for which to retrieve system configuration data.</param>
+        /// <returns>SystemData object containing system configuration information for the plan.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when the plan is null.</exception>
         public SystemData GetSystemDataForPlan(Plan plan)
         {
             if (plan == null)
@@ -608,20 +545,14 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(plan));
             }
 
-            var systemDataBOUuid = plan.SystemConfigBOUuid;
-
-            _logger?.Info($"Get SystemData with Uuid '{systemDataBOUuid}' for plan '{plan.PlanName}'");
-
-            var data = Exchange(new PlanBOQueryRequest { BoUuid = systemDataBOUuid });
-
-            if (data.IsError())
-            {
-                return null;
-            }
-
-            return Download<SystemData>(systemDataBOUuid, data);
+            return SafeDownload<SystemData>(plan.PlanName, plan.SystemConfigBOUuid);
         }
 
+        /// <summary>
+        /// Retrieves the DoseVolumeGrid for the specified plan.
+        /// Downloads the grid data using the plan's DoseVolumeBOUuid and parses it.
+        /// Returns null if the grid cannot be found or an error occurs during download or parsing.
+        /// </summary>
         public DoseVolumeGrid GetDoseVolumeGridForPlan(Plan plan)
         {
             if (plan == null)
@@ -631,16 +562,7 @@ namespace ZapClient
 
             var doseVolumeBOUuid = plan.DoseVolumeBOUuid;
 
-            _logger?.Info($"Get DoseVolumeGrid with Uuid '{doseVolumeBOUuid}' for plan '{plan.PlanName}'");
-
-            var data = Exchange(new PlanBOQueryRequest { BoUuid = doseVolumeBOUuid });
-
-            if (data.IsError())
-            {
-                return null;
-            }
-
-            var boList = (BOList)data;
+            var boList = SafeExchange<BOList>(new PlanBOQueryRequest { BoUuid = doseVolumeBOUuid }, $"Get DoseVolumeGrid with Uuid '{doseVolumeBOUuid}' for plan '{plan.PlanName}'");
 
             if (boList is null || boList.BOs.Count == 0)
             {
@@ -650,7 +572,7 @@ namespace ZapClient
 
             using (var stream = new MemoryStream())
             {
-                data = _client.Download(boList.BOs.First(), stream);
+                var data = _client.Download(boList.BOs.First(), stream);
 
                 if (data.IsError())
                 {
@@ -664,7 +586,7 @@ namespace ZapClient
                 {
                     return DoseVolumeGrid.ParseDoseVolumeGrid(stream);
                 }
-                catch (Exception ex) 
+                catch (Exception ex)
                 {
                     _logger?.Error(ex, $"Reading dose volume grid from file '{boList.BOs.First().Uuid}'");
                     throw new Exception($"Reading dose volume grid from file '{boList.BOs.First().Uuid}'", ex);
@@ -672,6 +594,10 @@ namespace ZapClient
             }
         }
 
+        /// <summary>
+        /// Retrieves delivery data for the specified plan.
+        /// If shortVersion is false, populates each fraction with its treatments and kV images.
+        /// </summary>
         public DeliveryData GetDeliveryDataForPlan(Plan plan, bool shortVersion = false)
         {
             if (plan == null)
@@ -679,20 +605,12 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(plan));
             }
 
-            _logger?.Info($"Get delivery data for plan '{plan.PlanName}'");
-
-            var data = Exchange(new DeliveredBeamSetQueryRequest { Plan = plan });
-
-            if (data.IsError())
-            {
-                return null;
-            }
-
-            var result = new DeliveryData((DeliveryBeamSet)data);
+            var deliveryBeamSet = SafeExchange<DeliveryBeamSet>(new DeliveredBeamSetQueryRequest { Plan = plan }, $"Get delivery data for plan '{plan.PlanName}'");
+            var deliveryData = new DeliveryData(deliveryBeamSet);
 
             if (!shortVersion)
             {
-                foreach (var fraction in result.Fractions)
+                foreach (var fraction in deliveryData.Fractions)
                 {
                     // Populate treatments
                     fraction.Treatments.AddRange(GetTreatmentsForFraction(fraction).OrderBy(f => f.StartTime));
@@ -702,9 +620,14 @@ namespace ZapClient
                 }
             }
 
-            return result;
+            return deliveryData;
         }
 
+        /// <summary>
+        /// Calculates the total dose for a list of kV images on nodes by summing the dose for each image using its KV, MA, and MS values.
+        /// </summary>
+        /// <param name="nodeData">The node data to use.</param>
+        /// <returns>Total dose</returns>
         public double CalcDoseForkVImages(List<KVImageOnNodeData> nodeData)
         {
             double totalDose = 0.0;
@@ -720,6 +643,11 @@ namespace ZapClient
             return totalDose;
         }
 
+        /// <summary>
+        /// Calculates the total dose for a list of kV images off nodes by summing the dose for each image using its KV, MA, and MS values.
+        /// </summary>
+        /// <param name="nodeData">The node data to use.</param>
+        /// <returns>Total dose</returns>
         public double CalcDoseForkVImages(List<KVImageOffNodeData> nodeData)
         {
             double totalDose = 0.0;
@@ -733,6 +661,49 @@ namespace ZapClient
             }
 
             return totalDose;
+        }
+
+        /// <summary>
+        /// Calculates the dose for each isocenter in the provided BeamData using the system's commissioning data.
+        /// For each isocenter, finds the matching commissioning data for the collimator size, then calculates the dose
+        /// for each beam using the output factor (OF), tissue phantom ratio (TPR), and monitor units (MU).
+        /// The calculated dose is assigned to the isocenter's TargetDose property.
+        /// </summary>
+        public void CalcDoseForIsocenters(BeamData beamData, SystemData systemData)
+        {
+            double ocr = 1; // Only use the center point
+
+            foreach (var isocenter in beamData.IsocenterSet.Isocenters)
+            {
+                double dose = 0;
+
+                var commisioningDataForCollimator = systemData.Commissioning.CommissioningDataMap
+                    .Where(cdm => cdm.CollimatorSize == isocenter.Collimator.Size)
+                    .FirstOrDefault();
+
+                if (commisioningDataForCollimator == null)
+                {
+                    continue;
+                }
+
+                var of = commisioningDataForCollimator.CommissioningTables.OFValue;
+                var depths = commisioningDataForCollimator.CommissioningTables.TPRTable.DepthArray;
+                var tprs = commisioningDataForCollimator.CommissioningTables.TPRTable.TPRValueArray;
+
+                foreach (var beam in isocenter.IsocenterBeamSet.Beams)
+                {
+                    if (beam.MU == 0)
+                    {
+                        continue;
+                    }
+
+                    var tpr = GetTPRValue(depths, tprs, beam.MaxEffDepth);
+
+                    dose += beam.MU * of * ocr * tpr;
+                }
+
+                isocenter.TargetDose = dose;
+            }
         }
 
         #endregion
@@ -805,42 +776,21 @@ namespace ZapClient
             }
         }
 
-        public void CalcDoseForIsocenters(BeamData beamData, SystemData systemData)
+        private T SafeExchange<T>(ZRequest request, string logMessage) where T : class
         {
-            double ocr = 1; // Only use the center point
+            _logger?.Info(logMessage);
 
-            foreach (var isocenter in beamData.IsocenterSet.Isocenters)
-            {
-                double dose = 0;
+            var data = Exchange(request);
 
-                var commisioningDataForCollimator = systemData.Commissioning.CommissioningDataMap.Where(cdm => cdm.CollimatorSize == isocenter.Collimator.Size).FirstOrDefault();
+            return data.IsError() ? null : data as T;
+        }
 
-                if (commisioningDataForCollimator == null)
-                {
-                    continue;
-                }
+        private T SafeDownload<T>(string name, string boUuid) where T : class
+        {
 
-                var of = commisioningDataForCollimator.CommissioningTables.OFValue;
-                var depths = commisioningDataForCollimator.CommissioningTables.TPRTable.DepthArray;
-                var tprs = commisioningDataForCollimator.CommissioningTables.TPRTable.TPRValueArray;
+            var data = SafeExchange<ZData>(new PlanBOQueryRequest { BoUuid = boUuid }, $"Load {typeof(T).Name} with Uuid '{boUuid}' for plan '{name}'");
 
-                foreach (var beam in isocenter.IsocenterBeamSet.Beams)
-                {
-                    if (beam.MU == 0)
-                    {
-                        continue;
-                    }
-
-                    //var distanceSourceTarget = Math.Sqrt(Math.Pow(beam.CTSource[0] - beam.CTTarget[0], 2) + Math.Pow(beam.CTSource[1] - beam.CTTarget[1], 2) + Math.Pow(beam.CTSource[2] - beam.CTTarget[2], 2));
-                    //var distanceDeviceTarget = Math.Sqrt(Math.Pow(beam.DeviceSource[0] - beam.CTTarget[0], 2) + Math.Pow(beam.DeviceSource[1] - beam.CTTarget[1], 2) + Math.Pow(beam.DeviceSource[2] - beam.CTTarget[2], 2));
-
-                    var tpr = GetTPRValue(depths, tprs, beam.MaxEffDepth);
-
-                    dose += beam.MU * of * ocr * tpr;
-                }
-
-                isocenter.TargetDose = dose;
-            }
+            return Download<T>(boUuid, data);
         }
 
         /// <summary>
@@ -858,30 +808,23 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(fraction));
             }
 
-            _logger?.Info($"Get treatment data for fraction '{fraction.ID}'");
-
-            var data = Exchange(new ReportQueryRequest { Fraction = fraction.ZapObject });
-
-            if (data.IsError())
-            {
-                return null;
-            }
+            var treatmentReportList = SafeExchange<ZList<TreatmentReportData>>(new ReportQueryRequest { Fraction = fraction.ZapObject }, $"Get treatment data for fraction '{fraction.ID}'");
 
             var result = new List<Treatment>();
 
-            if (((ZList<TreatmentReportData>)data)?.Value == null || ((ZList<TreatmentReportData>)data)?.Value.Count == 0)
+            if (treatmentReportList?.Value == null || treatmentReportList?.Value.Count == 0)
             {
                 return result;
             }
 
-            foreach (var treatmentReportData in ((ZList<TreatmentReportData>)data)?.Value)
+            // Save the used GlobalNodeSystem for this ZSystem for later use
+            if (_globalNodeSet == null)
             {
-                // Save the used GlobalNodeSystem for this ZSystem for later use
-                if (_globalNodeSet == null)
-                {
-                    _globalNodeSet = GetSystemGlobalNodeList(((ZList<TreatmentReportData>)data)?.Value[0].System);
-                }
+                _globalNodeSet = GetSystemGlobalNodeList(treatmentReportList?.Value[0].System);
+            }
 
+            foreach (var treatmentReportData in treatmentReportList?.Value)
+            {
                 var treatment = new Treatment(treatmentReportData, fraction);
 
                 // Get beams, that belong to this treatment
@@ -944,6 +887,11 @@ namespace ZapClient
             // Get kV images for this fraction
             foreach (var path in fraction.PathSet)
             {
+                if (path is null)
+                {
+                    continue;
+                }
+
                 var kvImagesOnNode = GetQueryKVImageOnNode(path);
 
                 FillNodesWithAngles(kvImagesOnNode.KVImagesOnNodes, _globalNodeSet);
@@ -1007,29 +955,17 @@ namespace ZapClient
                 throw new ArgumentNullException(nameof(system));
             }
 
-            _logger?.Info($"Get system global node list");
-
-            var data = Exchange(new SystemGlobalNodesQueryRequest { System = system });
-
-            return data.IsError() ? null : (GlobalNodeSet)data;
+            return SafeExchange<GlobalNodeSet>(new SystemGlobalNodesQueryRequest { System = system }, $"Get system global node list");
         }
 
         private KVImageOnPathData GetQueryKVImageOnNode(ZapSurgical.Data.Path planPath)
         {
-            _logger?.Info($"Get kV image on node list for plan path '{planPath}'");
-
-            var data = Exchange(new QueryKVImageOnNodeRequest { PlanPath = planPath });
-
-            return data.IsError() ? null : (KVImageOnPathData)data;
+            return SafeExchange<KVImageOnPathData>(new QueryKVImageOnNodeRequest { PlanPath = planPath }, $"Get kV image on node list for plan path '{planPath}'");
         }
 
         private KVImageOnPathOffNodeData GetQueryKVImageOffNode(ZapSurgical.Data.Path planPath)
         {
-            _logger?.Info($"Get kV image off node list for plan path {planPath}");
-
-            var data = Exchange(new QueryKVImageOffNodeRequest { PlanPath = planPath });
-
-            return data.IsError() ? null : (KVImageOnPathOffNodeData)data;
+            return SafeExchange<KVImageOnPathOffNodeData>(new QueryKVImageOffNodeRequest { PlanPath = planPath }, $"Get kV image off node list for plan path {planPath}");
         }
 
         private void FillNodesWithAngles(List<KVImageOnNodeData> nodeData, GlobalNodeSet globalNodeSet)
