@@ -40,6 +40,7 @@ namespace ZapClient.Data
         public string TrackingMaskUUID;
         public string UUID;
         public string Version;
+        public bool IsGyroscopicCorrectionOn;
         // Calculated
         public int Isocenters;
         public int Beams;

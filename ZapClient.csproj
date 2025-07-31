@@ -104,6 +104,7 @@
     <Compile Include="Data\Filter.cs" />
     <Compile Include="Data\Fraction.cs" />
     <Compile Include="Data\KVImage.cs" />
+    <Compile Include="Data\RotationCorrectionStatus.cs" />
     <Compile Include="Data\Treatment.cs" />
     <Compile Include="Data\VOIContourType.cs" />
     <Compile Include="Extensions\PatientExtension.cs" />

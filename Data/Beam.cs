@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using ZapSurgical.Data;
 
 namespace ZapClient.Data
@@ -27,6 +28,9 @@ namespace ZapClient.Data
         public double EstimatedUnitDoseAtMVDetector2;
         public double DeliveryTime;
         public DateTime TreatmentTime;
+        public double CorrectedAxial;
+        public double CorrectedOblique;
+        public RotationCorrectionStatus RotationCorrectionStatus;
         // From BO data
         public double UnOptimzedMU;
         public int DeliveryIndex;
@@ -59,6 +63,23 @@ namespace ZapClient.Data
             EstimatedUnitDoseAtMVDetector2 = beam.EstimatedUnitDoseAtMVDetector2;
             DeliveryTime = beam.DeliveryTime;
             TreatmentTime = beam.TreatmentTime;
+
+            // If we have the DP-1011 version beam data, add this values
+            CorrectedAxial = (double)(GetPropertyValue(beam, "CorrectedAxial") ?? beam.Axial);
+            CorrectedOblique = (double)(GetPropertyValue(beam, "CorrectedOblique") ?? beam.Oblique);
+            RotationCorrectionStatus = (RotationCorrectionStatus)(GetPropertyValue(beam, "RotationCorrectionStatus") ?? RotationCorrectionStatus.Uncorrected);
+        }
+
+        private object GetPropertyValue(ZapSurgical.Data.Beam beam, string propertyName)
+        {
+            PropertyInfo property = beam.GetType().GetProperty(propertyName);
+
+            if (property != null)
+            {
+                return property.GetValue(beam, null);
+            }
+
+            return null;
         }
     }
 }
